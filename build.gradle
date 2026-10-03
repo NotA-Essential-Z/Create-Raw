@@ -1,0 +1,149 @@
+plugins {
+	id "eclipse"
+	id "idea"
+	id "maven-publish"
+	id "net.neoforged.moddev" version "2.0.141"
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+	archivesName = mod_id
+}
+
+java {
+	toolchain.languageVersion = JavaLanguageVersion.of(21)
+	withSourcesJar()
+}
+
+// A separate development-only mod keeps Minecraft integration tests out of delivery JARs.
+sourceSets {
+	gameTest {
+		compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+		runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+	}
+}
+configurations {
+	gameTestImplementation.extendsFrom implementation
+	gameTestCompileOnly.extendsFrom compileOnly
+	gameTestRuntimeOnly.extendsFrom runtimeOnly
+}
+
+repositories {
+	mavenCentral()
+	maven { url = "https://maven.blamejared.com" } // JEI API and optional development runtime
+	maven { url = "https://maven.createmod.net" } // Create, Ponder, Flywheel
+	maven { url = "https://maven.ithundxr.dev/snapshots" } // Registrate (Create dependency)
+}
+
+neoForge {
+	version = neo_version
+
+	if (parchment_version != "none") {
+		parchment {
+			minecraftVersion = parchment_minecraft_version
+			mappingsVersion = parchment_version
+		}
+	}
+
+	mods {
+		"${mod_id}" {
+			sourceSet(sourceSets.main)
+		}
+		createraw_tests {
+			sourceSet(sourceSets.gameTest)
+		}
+	}
+
+	runs {
+		gameTestServer {
+			type = 'gameTestServer'
+			gameDirectory = project.file('run/gametest')
+			systemProperty 'neoforge.enabledGameTestNamespaces', 'createraw_tests'
+		}
+		client {
+			loadedMods = [mods[mod_id]]
+			client()
+			systemProperty "neoforge.enabledGameTestNamespaces", mod_id
+		}
+		server {
+			loadedMods = [mods[mod_id]]
+			server()
+			gameDirectory = project.file("run/server")
+			systemProperty "neoforge.enabledGameTestNamespaces", mod_id
+			programArgument "--nogui"
+		}
+		data {
+			loadedMods = [mods[mod_id]]
+			data()
+			programArguments.addAll(
+				"--mod", mod_id,
+				"--all",
+				"--output", file("src/generated/resources/").getAbsolutePath(),
+				"--existing", file("src/main/resources/").getAbsolutePath()
+			)
+		}
+	}
+}
+
+sourceSets.main.resources {
+	srcDir "src/generated/resources"
+}
+
+dependencies {
+	// JEI is optional: compile against its API, and opt into the client runtime with -PwithJei.
+	compileOnly "mezz.jei:jei-1.21.1-common-api:19.21.0.247"
+	compileOnly "mezz.jei:jei-1.21.1-neoforge-api:19.21.0.247"
+	if (providers.gradleProperty('withJei').map { it.toBoolean() }.getOrElse(false)) {
+		runtimeOnly "mezz.jei:jei-1.21.1-neoforge:19.21.0.247"
+	}
+	// Create is published with its Minecraft version baked into the artifact id.
+	implementation("com.simibubi.create:create-${create_minecraft_version}:${create_version}") {
+		// Optional compatibility mods in Create's POM are not addon requirements.
+		transitive = false
+	}
+
+	// Registrate/Flywheel/Ponder are bundled inside Create's jar at runtime
+	// (jar-in-jar), so they're declared compileOnly here - visible to javac
+	// (our block entity extends a Create class whose supertype comes from
+	// Ponder) but not duplicated into our own jar. Declared explicitly rather
+	// than relying on Create's own POM, since some Create builds only list
+	// these as runtime-scope, which leaves them off the compile classpath.
+	compileOnly "com.tterrag.registrate:Registrate:MC1.21-1.3.0+67"
+	compileOnly "net.createmod.ponder:ponder-neoforge:1.0.82+mc1.21.1"
+	compileOnly "dev.engine-room.flywheel:flywheel-neoforge-api-1.21.1:1.0.6"
+	testImplementation 'org.junit.jupiter:junit-jupiter:5.11.0'
+	testImplementation 'org.joml:joml:1.10.5'
+	testImplementation 'com.google.code.gson:gson:2.10.1'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.11.0'
+}
+
+test {
+	useJUnitPlatform()
+}
+
+tasks.withType(JavaCompile).configureEach {
+	options.encoding = "UTF-8"
+}
+
+var generateModMetadata = tasks.register("generateModMetadata", ProcessResources) {
+	var replaceProperties = [
+		"mod_id"                  : mod_id,
+		"mod_name"                : mod_name,
+		"mod_version"             : mod_version,
+		"mod_author"              : mod_author,
+		"mod_description"         : mod_description,
+		"minecraft_version_range" : minecraft_version_range,
+		"neo_version_range"       : neo_version_range,
+		"loader_version_range"    : loader_version_range,
+		"create_mod_version"      : create_mod_version,
+	]
+	inputs.properties(replaceProperties)
+	expand(replaceProperties)
+	from("src/main/templates")
+	into("build/generated/sources/modMetadata")
+}
+
+sourceSets.main.resources.srcDir(generateModMetadata)
+neoForge.ideSyncTask(generateModMetadata)
