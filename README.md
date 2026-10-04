@@ -63,6 +63,6 @@ Il JAR installabile è in `build/libs/createraw-1.0.0.jar`. Non installare il JA
 
 Verifica del 3 ottobre 2026: 64 GameTest sul server NeoForge/Create reale e 14 test JUnit di rotazione e continuità delle animazioni passati; build completata. Controllati JSON, traduzioni, placeholder e chiavi Ponder. Il client 1.0.0 ha caricato Create, JEI (62 gruppi ricette Rawer) e un mondo di prova; la verifica visiva delle scene Ponder, delle animazioni e del nuovo menu config resta da effettuare in gioco. Questi test non certificano ogni modpack o ogni combinazione di automazione Create.
 
-Owner: notzessentialz. Developer: Pigiazza. [Modrinth](https://modrinth.com/mod/createraw), [CurseForge](https://www.curseforge.com/minecraft/mc-mods/create-raw/preview), [GitHub](https://github.com/NotA-Essential-Z/Create-Raw).
+Owner: NotA-Essential-Z. Developer: Pigiazza for 1.0.0, NotA-Essential-Z for 1.0.1+. [Modrinth](https://modrinth.com/mod/createraw), [CurseForge](https://www.curseforge.com/minecraft/mc-mods/create-raw/preview), [GitHub](https://github.com/NotA-Essential-Z/Create-Raw).
 
 Mod distribuita con licenza MIT, inclusa nel JAR e nei sorgenti. Le dipendenze mantengono le proprie licenze.
